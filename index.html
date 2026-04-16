@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#030712" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="最初の音" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <title>最初の音 | first-note</title>
+  </head>
+  <body class="bg-gray-950 text-white min-h-screen">
+    <div id="app" class="max-w-sm mx-auto px-4 py-8 flex flex-col gap-6">
+
+      <!-- File Input -->
+      <section id="section-file">
+        <div id="drop-zone"
+          class="border-2 border-dashed border-gray-700 rounded-2xl p-8 text-center cursor-pointer transition-colors hover:border-gray-500 active:bg-gray-900">
+          <p class="text-gray-300">ファイルを選択</p>
+          <p class="text-gray-500 text-sm mt-1">またはここにドロップ</p>
+          <p class="text-gray-600 text-xs mt-2">mp3 · wav · m4a · ogg</p>
+          <input id="file-input" type="file" accept="audio/*,.mp3,.wav,.m4a,.ogg" class="hidden" />
+        </div>
+        <p id="file-status" class="text-sm text-center mt-2 h-5 text-gray-400"></p>
+      </section>
+
+      <!-- Waveform + Range Selection -->
+      <section id="section-waveform" class="hidden">
+        <p class="text-xs text-gray-500 uppercase tracking-widest mb-3">解析区間</p>
+        <div class="bg-gray-900 rounded-2xl p-5 flex flex-col gap-4">
+          <div id="waveform-root" class="relative w-full h-28 bg-gray-950 rounded-lg overflow-hidden select-none touch-none">
+            <canvas data-waveform class="block w-full h-full"></canvas>
+            <div data-selection class="absolute top-0 bottom-0 bg-indigo-500/25 border-x border-indigo-400 pointer-events-none" style="left:0;width:0"></div>
+            <div data-handle-start
+              class="absolute top-0 bottom-0 w-0.5 bg-indigo-300 cursor-ew-resize -translate-x-px"
+              tabindex="0" role="slider" aria-label="開始位置" style="left:0"></div>
+            <div data-handle-end
+              class="absolute top-0 bottom-0 w-0.5 bg-indigo-300 cursor-ew-resize -translate-x-px"
+              tabindex="0" role="slider" aria-label="終了位置" style="left:0"></div>
+          </div>
+          <p id="range-text" class="text-xs text-gray-400 text-center tabular-nums h-4"></p>
+          <div class="flex gap-3 justify-center">
+            <button id="btn-play-range"
+              class="px-5 py-2.5 bg-gray-700 hover:bg-gray-600 rounded-xl text-sm font-medium transition-colors">
+              ▶ 区間を再生
+            </button>
+            <button id="btn-stop-range"
+              class="hidden px-5 py-2.5 bg-gray-700 hover:bg-gray-600 rounded-xl text-sm font-medium transition-colors">
+              ■ 停止
+            </button>
+            <button id="btn-analyze"
+              class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-sm font-medium transition-colors">
+              解析する
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Reference Pitch -->
+      <section id="section-reference" class="hidden">
+        <p class="text-xs text-gray-500 uppercase tracking-widest mb-3">基準音</p>
+        <div class="bg-gray-900 rounded-2xl p-5">
+          <div class="text-center mb-4">
+            <p id="ref-note" class="text-7xl font-bold tabular-nums">—</p>
+            <p id="ref-hz" class="text-gray-400 mt-2 text-sm">—</p>
+          </div>
+          <div class="flex gap-3 justify-center mb-4">
+            <button id="btn-play"
+              class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-sm font-medium transition-colors">
+              ▶ 再生
+            </button>
+            <button id="btn-stop"
+              class="hidden px-6 py-2.5 bg-gray-700 hover:bg-gray-600 rounded-xl text-sm font-medium transition-colors">
+              ■ 停止
+            </button>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="text-xs text-gray-500 w-8">音量</span>
+            <input id="volume-slider" type="range" min="0" max="100" value="70"
+              class="flex-1 accent-indigo-500 cursor-pointer" />
+          </div>
+        </div>
+      </section>
+
+      <!-- Mic Display -->
+      <section id="section-mic" class="hidden">
+        <p class="text-xs text-gray-500 uppercase tracking-widest mb-3">あなたの音</p>
+        <div class="bg-gray-900 rounded-2xl p-5 text-center">
+          <p id="mic-note" class="text-7xl font-bold tabular-nums">—</p>
+          <p id="mic-hz" class="text-gray-400 mt-2 text-sm">—</p>
+          <p id="mic-status" class="text-xs text-gray-600 mt-2 h-4"></p>
+        </div>
+      </section>
+
+      <!-- Tuner Meter -->
+      <section id="section-tuner" class="hidden">
+        <p class="text-xs text-gray-500 uppercase tracking-widest mb-3">一致度</p>
+        <div class="bg-gray-900 rounded-2xl p-5">
+          <div id="tuner-meter"></div>
+        </div>
+      </section>
+
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
