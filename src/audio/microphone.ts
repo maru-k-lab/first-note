@@ -4,12 +4,18 @@ import { getAudioContext } from './audioContext';
 
 const BUFFER_SIZE = 2048;
 const FRAME_INTERVAL_MS = 1000 / 30; // ~30 fps
-const SILENCE_RMS = 0.0015;
+const SILENCE_RMS = 0.0003;
 const MIC_MIN_HZ = 60;
 const MIC_MAX_HZ = 1400;
 const PITCHY_CLARITY_THRESHOLD = 0.62;
 
 export type MicSignalState = 'silent' | 'unpitched' | 'pitched';
+
+export interface MicPitchUpdate {
+  hz: number | null;
+  signal: MicSignalState;
+  level: number;
+}
 
 /**
  * Captures mic input and emits real-time pitch detections via a callback.
@@ -29,7 +35,7 @@ export class MicrophoneAnalyzer {
   private rafId: number | null = null;
   private lastTick = 0;
 
-  async start(onPitch: (hz: number | null, signal: MicSignalState) => void): Promise<void> {
+  async start(onPitch: (update: MicPitchUpdate) => void): Promise<void> {
     const ctx = getAudioContext();
 
     if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
@@ -74,24 +80,25 @@ export class MicrophoneAnalyzer {
         sumSq += this.buffer[i] * this.buffer[i];
       }
       const rms = Math.sqrt(sumSq / this.buffer.length);
+      const level = Math.min(1, rms / 0.02);
       if (rms < SILENCE_RMS) {
-        onPitch(null, 'silent');
+        onPitch({ hz: null, signal: 'silent', level });
         return;
       }
 
       const yinHz = this.detect(this.buffer);
       if (isUsableMicPitch(yinHz)) {
-        onPitch(yinHz, 'pitched');
+        onPitch({ hz: yinHz, signal: 'pitched', level });
         return;
       }
 
       const [pitchyHz, clarity] = pitchy.findPitch(this.buffer, ctx.sampleRate);
       if (clarity >= PITCHY_CLARITY_THRESHOLD && isUsableMicPitch(pitchyHz)) {
-        onPitch(pitchyHz, 'pitched');
+        onPitch({ hz: pitchyHz, signal: 'pitched', level });
         return;
       }
 
-      onPitch(null, 'unpitched');
+      onPitch({ hz: null, signal: 'unpitched', level });
     };
 
     this.rafId = requestAnimationFrame(loop);

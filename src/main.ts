@@ -208,8 +208,8 @@ const refDisplay = setupReferenceDisplay({
       stopRangePlayback();
       await resumeAudioContext();
       oscillator.start(referenceHz);
-      await mic.start((hz, signal) => {
-        micDisplay.update(hz, signal);
+      await mic.start(({ hz, signal, level }) => {
+        micDisplay.update(hz, signal, level);
         tunerMeter.setCents(hz !== null ? centsBetween(hz, referenceHz!) : null);
       });
       refDisplay.setPlayState(true);
