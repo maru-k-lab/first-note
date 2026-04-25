@@ -8,6 +8,7 @@
 input/
 scripts/cdp_*.ps1
 *.Zone.Identifier
+SECURITY_REPORT.md
 
 # Logs
 logs
