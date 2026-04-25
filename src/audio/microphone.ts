@@ -1,9 +1,15 @@
 import { YIN } from 'pitchfinder';
+import { PitchDetector } from 'pitchy';
 import { getAudioContext } from './audioContext';
 
 const BUFFER_SIZE = 2048;
 const FRAME_INTERVAL_MS = 1000 / 30; // ~30 fps
-const SILENCE_RMS = 0.005;
+const SILENCE_RMS = 0.0015;
+const MIC_MIN_HZ = 60;
+const MIC_MAX_HZ = 1400;
+const PITCHY_CLARITY_THRESHOLD = 0.62;
+
+export type MicSignalState = 'silent' | 'unpitched' | 'pitched';
 
 /**
  * Captures mic input and emits real-time pitch detections via a callback.
@@ -19,10 +25,11 @@ export class MicrophoneAnalyzer {
   private analyser: AnalyserNode | null = null;
   private buffer = new Float32Array(BUFFER_SIZE);
   private detect: ((b: Float32Array) => number | null) | null = null;
+  private pitchy: PitchDetector<Float32Array> | null = null;
   private rafId: number | null = null;
   private lastTick = 0;
 
-  async start(onPitch: (hz: number | null) => void): Promise<void> {
+  async start(onPitch: (hz: number | null, signal: MicSignalState) => void): Promise<void> {
     const ctx = getAudioContext();
 
     if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
@@ -44,9 +51,12 @@ export class MicrophoneAnalyzer {
 
     this.detect = YIN({
       sampleRate: ctx.sampleRate,
-      threshold: 0.1,
-      probabilityThreshold: 0.1,
+      threshold: 0.15,
+      probabilityThreshold: 0.05,
     });
+    this.pitchy = PitchDetector.forFloat32Array(BUFFER_SIZE);
+    this.pitchy.clarityThreshold = PITCHY_CLARITY_THRESHOLD;
+    this.pitchy.minVolumeAbsolute = SILENCE_RMS;
 
     const loop = (now: number): void => {
       this.rafId = requestAnimationFrame(loop);
@@ -55,6 +65,8 @@ export class MicrophoneAnalyzer {
       this.lastTick = now;
 
       this.analyser.getFloatTimeDomainData(this.buffer);
+      const pitchy = this.pitchy;
+      if (!pitchy) return;
 
       // Silence gate: skip detection when signal is too quiet
       let sumSq = 0;
@@ -63,11 +75,23 @@ export class MicrophoneAnalyzer {
       }
       const rms = Math.sqrt(sumSq / this.buffer.length);
       if (rms < SILENCE_RMS) {
-        onPitch(null);
+        onPitch(null, 'silent');
         return;
       }
 
-      onPitch(this.detect(this.buffer) ?? null);
+      const yinHz = this.detect(this.buffer);
+      if (isUsableMicPitch(yinHz)) {
+        onPitch(yinHz, 'pitched');
+        return;
+      }
+
+      const [pitchyHz, clarity] = pitchy.findPitch(this.buffer, ctx.sampleRate);
+      if (clarity >= PITCHY_CLARITY_THRESHOLD && isUsableMicPitch(pitchyHz)) {
+        onPitch(pitchyHz, 'pitched');
+        return;
+      }
+
+      onPitch(null, 'unpitched');
     };
 
     this.rafId = requestAnimationFrame(loop);
@@ -84,5 +108,10 @@ export class MicrophoneAnalyzer {
     this.analyser = null;
     this.stream = null;
     this.detect = null;
+    this.pitchy = null;
   }
+}
+
+function isUsableMicPitch(hz: number | null): hz is number {
+  return hz !== null && Number.isFinite(hz) && hz >= MIC_MIN_HZ && hz <= MIC_MAX_HZ;
 }

@@ -1,7 +1,8 @@
 import { frequencyToNote } from '../utils/pitchToNote';
+import type { MicSignalState } from '../audio/microphone';
 
 export interface MicDisplay {
-  update: (hz: number | null) => void;
+  update: (hz: number | null, signal?: MicSignalState) => void;
   show: () => void;
   hide: () => void;
 }
@@ -13,11 +14,13 @@ export function setupMicDisplay(): MicDisplay {
   const micStatus = document.getElementById('mic-status')!;
 
   return {
-    update(hz: number | null): void {
+    update(hz: number | null, signal: MicSignalState = 'unpitched'): void {
       if (hz === null) {
         micNote.textContent = '—';
         micHz.textContent = '—';
-        micStatus.textContent = 'ピッチが検出できません';
+        micStatus.textContent = signal === 'silent'
+          ? '音が小さいです'
+          : '入力あり・ピッチ検出中';
       } else {
         const { label } = frequencyToNote(hz);
         micNote.textContent = label;
