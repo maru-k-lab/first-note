@@ -4,7 +4,7 @@
 
 楽器や歌のキー合わせ、フレーズ単位の音程確認に使うことを想定しています。
 
-[https://github.com/maru-k-lab/first-note](https://first-note.pages.dev/)
+https://first-note.pages.dev/
 
 ## 機能
 
