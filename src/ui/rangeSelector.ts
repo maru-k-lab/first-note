@@ -7,6 +7,7 @@ export interface RangeSelectorOptions {
   rootId: string;
   onChange: (range: Range) => void;
   onChangeEnd?: (range: Range) => void;
+  onUserChange?: (range: Range) => void;
 }
 
 export interface RangeSelector {
@@ -16,6 +17,7 @@ export interface RangeSelector {
 }
 
 const MIN_RANGE_SEC = 0.05; // YIN 最低要件: 50ms
+const DEFAULT_RANGE_SEC = 0.75;
 const STEP_SEC = 0.01;      // 矢印キー: 10ms
 const STEP_LARGE_SEC = 0.1; // Shift+矢印: 100ms
 
@@ -27,8 +29,10 @@ export function setupRangeSelector(opts: RangeSelectorOptions): RangeSelector {
 
   let duration = 1;
   let startSec = 0;
-  let endSec = Math.min(0.75, duration);
-  let dragging: 'start' | 'end' | null = null;
+  let rangeLengthSec = Math.min(DEFAULT_RANGE_SEC, duration);
+  let endSec = rangeLengthSec;
+  let dragging = false;
+  let dragOffsetSec = rangeLengthSec / 2;
   let disabled = false;
 
   function clamp(v: number, lo: number, hi: number): number {
@@ -62,76 +66,75 @@ export function setupRangeSelector(opts: RangeSelectorOptions): RangeSelector {
     updatePositions();
   }
 
+  function notifyUser(): void {
+    opts.onUserChange?.({ startSec, endSec });
+  }
+
+  function setStart(nextStartSec: number): void {
+    startSec = clamp(nextStartSec, 0, Math.max(0, duration - rangeLengthSec));
+    endSec = startSec + rangeLengthSec;
+  }
+
+  function clientXToSec(clientX: number): number {
+    const rect = root.getBoundingClientRect();
+    const x = clamp(clientX - rect.left, 0, rect.width);
+    return (x / rect.width) * duration;
+  }
+
   // PointerEvent ハンドラ
-  function onPointerDown(e: PointerEvent, handle: 'start' | 'end'): void {
+  function onPointerDown(e: PointerEvent): void {
     if (disabled) return;
     e.preventDefault();
-    dragging = handle;
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    const sec = clientXToSec(e.clientX);
+    const insideSelection = sec >= startSec && sec <= endSec;
+    dragOffsetSec = insideSelection ? sec - startSec : rangeLengthSec / 2;
+    dragging = true;
+    root.setPointerCapture(e.pointerId);
+    if (!insideSelection) {
+      setStart(sec - dragOffsetSec);
+      notify();
+      notifyUser();
+    }
   }
 
   function onPointerMove(e: PointerEvent): void {
     if (!dragging || disabled) return;
-    const rect = root.getBoundingClientRect();
-    const x = clamp(e.clientX - rect.left, 0, rect.width);
-    const sec = (x / rect.width) * duration;
-
-    if (dragging === 'start') {
-      startSec = clamp(sec, 0, endSec - MIN_RANGE_SEC);
-    } else {
-      endSec = clamp(sec, startSec + MIN_RANGE_SEC, duration);
-    }
+    setStart(clientXToSec(e.clientX) - dragOffsetSec);
     notify();
+    notifyUser();
   }
 
   function onPointerUp(e: PointerEvent): void {
     if (!dragging) return;
-    (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-    dragging = null;
+    root.releasePointerCapture(e.pointerId);
+    dragging = false;
     opts.onChangeEnd?.({ startSec, endSec });
   }
 
-  // ハンドルにイベント登録
-  handleStart.addEventListener('pointerdown', (e) => onPointerDown(e, 'start'));
-  handleEnd.addEventListener('pointerdown', (e) => onPointerDown(e, 'end'));
-  handleStart.addEventListener('pointermove', onPointerMove);
-  handleEnd.addEventListener('pointermove', onPointerMove);
-  handleStart.addEventListener('pointerup', onPointerUp);
-  handleEnd.addEventListener('pointerup', onPointerUp);
-  handleStart.addEventListener('pointercancel', onPointerUp);
-  handleEnd.addEventListener('pointercancel', onPointerUp);
+  root.addEventListener('pointerdown', onPointerDown);
+  root.addEventListener('pointermove', onPointerMove);
+  root.addEventListener('pointerup', onPointerUp);
+  root.addEventListener('pointercancel', onPointerUp);
 
   // キーボード操作
-  function onKeyDown(e: KeyboardEvent, handle: 'start' | 'end'): void {
+  function onKeyDown(e: KeyboardEvent): void {
     if (disabled) return;
     const step = e.shiftKey ? STEP_LARGE_SEC : STEP_SEC;
-    let changed = false;
+    const direction =
+      e.key === 'ArrowLeft' || e.key === 'ArrowDown' ? -1 :
+      e.key === 'ArrowRight' || e.key === 'ArrowUp' ? 1 :
+      0;
+    if (direction === 0) return;
 
-    if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
-      if (handle === 'start') {
-        startSec = clamp(startSec - step, 0, endSec - MIN_RANGE_SEC);
-      } else {
-        endSec = clamp(endSec - step, startSec + MIN_RANGE_SEC, duration);
-      }
-      changed = true;
-    } else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
-      if (handle === 'start') {
-        startSec = clamp(startSec + step, 0, endSec - MIN_RANGE_SEC);
-      } else {
-        endSec = clamp(endSec + step, startSec + MIN_RANGE_SEC, duration);
-      }
-      changed = true;
-    }
-
-    if (changed) {
-      e.preventDefault();
-      notify();
-      opts.onChangeEnd?.({ startSec, endSec });
-    }
+    e.preventDefault();
+    setStart(startSec + step * direction);
+    notify();
+    notifyUser();
+    opts.onChangeEnd?.({ startSec, endSec });
   }
 
-  handleStart.addEventListener('keydown', (e) => onKeyDown(e, 'start'));
-  handleEnd.addEventListener('keydown', (e) => onKeyDown(e, 'end'));
+  handleStart.addEventListener('keydown', onKeyDown);
+  handleEnd.addEventListener('keydown', onKeyDown);
 
   // ResizeObserver でリサイズ時に位置再計算
   const ro = new ResizeObserver(() => {
@@ -143,7 +146,11 @@ export function setupRangeSelector(opts: RangeSelectorOptions): RangeSelector {
     reset(dur: number, initial?: Range): void {
       duration = dur;
       startSec = initial?.startSec ?? 0;
-      endSec = initial?.endSec ?? Math.min(0.75, dur);
+      rangeLengthSec = Math.max(
+        Math.min(initial ? initial.endSec - initial.startSec : DEFAULT_RANGE_SEC, dur),
+        Math.min(MIN_RANGE_SEC, dur),
+      );
+      setStart(startSec);
       updatePositions();
       notify();
     },
@@ -154,8 +161,7 @@ export function setupRangeSelector(opts: RangeSelectorOptions): RangeSelector {
 
     disable(d: boolean): void {
       disabled = d;
-      handleStart.style.pointerEvents = d ? 'none' : 'auto';
-      handleEnd.style.pointerEvents = d ? 'none' : 'auto';
+      root.style.pointerEvents = d ? 'none' : 'auto';
     },
   };
 }

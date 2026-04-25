@@ -25,6 +25,10 @@ export class MicrophoneAnalyzer {
   async start(onPitch: (hz: number | null) => void): Promise<void> {
     const ctx = getAudioContext();
 
+    if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+      throw new Error('MIC_REQUIRES_SECURE_CONTEXT');
+    }
+
     this.stream = await navigator.mediaDevices.getUserMedia({
       audio: {
         echoCancellation: false,

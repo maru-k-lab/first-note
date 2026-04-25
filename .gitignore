@@ -1,3 +1,14 @@
+# Environment variables (never commit secrets)
+.env
+.env.*
+!.env.example
+.codex/
+
+# Local verification assets
+input/
+scripts/cdp_*.ps1
+*.Zone.Identifier
+
 # Logs
 logs
 *.log

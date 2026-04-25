@@ -1,6 +1,6 @@
 {
-  "name": "最初の音",
-  "short_name": "最初の音",
+  "name": "first-note",
+  "short_name": "first-note",
   "description": "Audio pitch detector and reference tone player",
   "start_url": "/",
   "display": "standalone",

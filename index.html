@@ -6,13 +6,17 @@
     <meta name="theme-color" content="#030712" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="最初の音" />
+    <meta name="apple-mobile-web-app-title" content="first-note" />
     <link rel="manifest" href="/manifest.json" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
-    <title>最初の音 | first-note</title>
+    <title>first-note</title>
   </head>
   <body class="bg-gray-950 text-white min-h-screen">
     <div id="app" class="max-w-sm mx-auto px-4 py-8 flex flex-col gap-6">
+
+      <header class="text-center">
+        <p class="text-xs font-mono tracking-widest text-gray-400">first-note</p>
+      </header>
 
       <!-- File Input -->
       <section id="section-file">
@@ -30,7 +34,7 @@
       <section id="section-waveform" class="hidden">
         <p class="text-xs text-gray-500 uppercase tracking-widest mb-3">解析区間</p>
         <div class="bg-gray-900 rounded-2xl p-5 flex flex-col gap-4">
-          <div id="waveform-root" class="relative w-full h-28 bg-gray-950 rounded-lg overflow-hidden select-none touch-none">
+          <div id="waveform-root" class="relative w-full h-28 bg-gray-950 rounded-lg overflow-hidden select-none touch-none cursor-ew-resize">
             <canvas data-waveform class="block w-full h-full"></canvas>
             <div data-selection class="absolute top-0 bottom-0 bg-indigo-500/25 border-x border-indigo-400 pointer-events-none" style="left:0;width:0"></div>
             <div data-handle-start
@@ -42,19 +46,20 @@
           </div>
           <p id="range-text" class="text-xs text-gray-400 text-center tabular-nums h-4"></p>
           <div class="flex gap-3 justify-center">
-            <button id="btn-play-range"
-              class="px-5 py-2.5 bg-gray-700 hover:bg-gray-600 rounded-xl text-sm font-medium transition-colors">
-              ▶ 区間を再生
-            </button>
-            <button id="btn-stop-range"
-              class="hidden px-5 py-2.5 bg-gray-700 hover:bg-gray-600 rounded-xl text-sm font-medium transition-colors">
-              ■ 停止
-            </button>
             <button id="btn-analyze"
               class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-sm font-medium transition-colors">
               解析する
             </button>
           </div>
+        </div>
+      </section>
+
+      <!-- Analysis Observation -->
+      <section id="section-analysis" class="hidden">
+        <p class="text-xs text-gray-500 uppercase tracking-widest mb-3">解析観測</p>
+        <div class="bg-gray-900 rounded-2xl p-5 flex flex-col gap-4">
+          <div id="analysis-summary" class="text-sm text-gray-300 tabular-nums"></div>
+          <div id="candidate-list" class="flex flex-col gap-2"></div>
         </div>
       </section>
 
@@ -101,6 +106,27 @@
           <div id="tuner-meter"></div>
         </div>
       </section>
+
+      <footer class="text-center mt-2 flex flex-col gap-1">
+        <p class="text-xs text-gray-600 tracking-widest">
+          CREATED BY
+          <a href="https://x.com/fixedfeeeee" target="_blank" rel="noopener noreferrer"
+            class="hover:text-gray-400 transition-colors">@fixedfeeeee</a>
+        </p>
+        <p class="text-xs text-gray-700">
+          © 2026
+          <a href="https://x.com/fixedfeeeee" target="_blank" rel="noopener noreferrer"
+            class="hover:text-gray-500 transition-colors">@fixedfeeeee</a>
+          —
+          <a href="https://www.gnu.org/licenses/gpl-3.0.html"
+            target="_blank" rel="noopener noreferrer"
+            class="underline hover:text-gray-500 transition-colors">GPL v3</a>
+          —
+          <a href="https://github.com/maru-k-lab/first-note"
+            target="_blank" rel="noopener noreferrer"
+            class="underline hover:text-gray-500 transition-colors">Source</a>
+        </p>
+      </footer>
 
     </div>
     <script type="module" src="/src/main.ts"></script>

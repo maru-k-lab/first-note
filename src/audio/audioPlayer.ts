@@ -3,6 +3,7 @@ import { getAudioContext } from './audioContext';
 export interface PlayRangeOptions {
   startSec: number;
   endSec: number;
+  loop?: boolean;
   onEnded?: () => void; // 自然終了・手動停止いずれでも1回だけ発火
 }
 
@@ -40,6 +41,14 @@ export class AudioPlayer {
 
     const offset = Math.max(0, opts.startSec);
     const duration = Math.max(0, opts.endSec - opts.startSec);
+    if (opts.loop) {
+      src.loop = true;
+      src.loopStart = offset;
+      src.loopEnd = Math.max(offset, opts.endSec);
+      src.start(0, offset);
+      return;
+    }
+
     src.start(0, offset, duration); // 終端で onended 自動発火
   }
 
