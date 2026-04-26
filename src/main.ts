@@ -258,6 +258,9 @@ document.getElementById('btn-analyze')!.addEventListener('click', async () => {
 
 setupFileInput({
   async onFile(file) {
+    // <input change> の user gesture 内で AudioContext を resume させておく。
+    // これがないと、初回スライダードラッグ（pointermove 起点）で resume が効かず再生されない。
+    void resumeAudioContext();
     setFileStatus('読み込み中...', 'gray');
     currentFileName = file.name;
 
